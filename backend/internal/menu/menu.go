@@ -38,6 +38,18 @@ func NewDemoStore() *Store {
 	}
 }
 
+// Get returns the menu item with the given ID.
+func (s *Store) Get(id string) (Item, bool) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	for _, it := range s.items {
+		if it.ID == id {
+			return it, true
+		}
+	}
+	return Item{}, false
+}
+
 // List returns a copy of all menu items.
 func (s *Store) List() []Item {
 	s.mu.Lock()
