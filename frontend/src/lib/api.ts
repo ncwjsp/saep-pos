@@ -1,4 +1,4 @@
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
+export const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
 
 export type MenuItem = {
   id: string;
@@ -56,6 +56,13 @@ export async function createOrder(
   });
   if (!res.ok) throw new Error(await parseError(res));
   return (await res.json()) as Order;
+}
+
+export async function fetchKitchenOrders(): Promise<Order[]> {
+  const res = await fetch(`${API_URL}/kitchen/orders`);
+  if (!res.ok) throw new Error(await parseError(res));
+  const body = (await res.json()) as { orders: Order[] };
+  return body.orders;
 }
 
 // formatBaht renders satang as baht using integer math only (no float money).

@@ -2,12 +2,21 @@ package handlers
 
 import (
 	"fmt"
+	"net/http"
 	"time"
 
 	"github.com/gin-gonic/gin"
 
+	"github.com/ncwjsp/saep-pos/internal/orders"
 	"github.com/ncwjsp/saep-pos/internal/sse"
 )
+
+// ListOrders returns all orders for the kitchen view, oldest first.
+func ListOrders(store *orders.Store) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{"orders": store.List()})
+	}
+}
 
 // heartbeatInterval keeps idle streams alive through proxies and lets the
 // server notice dead connections.

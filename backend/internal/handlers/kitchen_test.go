@@ -14,6 +14,27 @@ import (
 	"github.com/ncwjsp/saep-pos/internal/sse"
 )
 
+func TestListOrders(t *testing.T) {
+	r, store, _ := newOrderTestRouter()
+	r.GET("/kitchen/orders", ListOrders(store))
+
+	postOrder(t, r, "/t/demo/orders", `{"items":[{"menu_item_id":"1","quantity":1}]}`)
+
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "/kitchen/orders", nil)
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", w.Code, http.StatusOK)
+	}
+	if !strings.Contains(w.Body.String(), `"orders":[`) {
+		t.Errorf("body missing orders array: %s", w.Body.String())
+	}
+	if !strings.Contains(w.Body.String(), `"total_satang":6000`) {
+		t.Errorf("body missing created order: %s", w.Body.String())
+	}
+}
+
 func TestKitchenStreamDeliversEvents(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	hub := sse.NewHub()

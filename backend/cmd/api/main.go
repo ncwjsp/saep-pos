@@ -21,9 +21,12 @@ func main() {
 	router.Use(middleware.CORS())
 	router.GET("/t/:qrToken/menu", handlers.GetMenu(menuStore))
 	router.POST("/t/:qrToken/orders", handlers.CreateOrder(orderStore, hub))
+	router.GET("/kitchen/orders", handlers.ListOrders(orderStore))
 	router.GET("/kitchen/stream", handlers.KitchenStream(hub))
 
-	if err := router.Run("localhost:8080"); err != nil {
+	// Bind all interfaces so phones on the same LAN can reach the API
+	// (the customer page is opened from a phone in the QR demo).
+	if err := router.Run(":8080"); err != nil {
 		log.Fatalf("running server: %v", err)
 	}
 }
