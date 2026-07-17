@@ -1,12 +1,14 @@
 package handlers
 
 import (
+	"encoding/json"
 	"errors"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
 
 	"github.com/ncwjsp/saep-pos/internal/orders"
+	"github.com/ncwjsp/saep-pos/internal/sse"
 )
 
 type createOrderRequest struct {
@@ -17,8 +19,9 @@ type createOrderRequest struct {
 	} `json:"items"`
 }
 
-// CreateOrder submits an order for the table identified by :qrToken.
-func CreateOrder(store *orders.Store) gin.HandlerFunc {
+// CreateOrder submits an order for the table identified by :qrToken and
+// publishes an order_created event for the kitchen stream.
+func CreateOrder(store *orders.Store, hub *sse.Hub) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		if c.Param("qrToken") != demoQRToken {
 			c.JSON(http.StatusNotFound, gin.H{"error": "table not found"})
@@ -50,6 +53,10 @@ func CreateOrder(store *orders.Store) gin.HandlerFunc {
 			}
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "creating order failed"})
 			return
+		}
+
+		if data, err := json.Marshal(o); err == nil {
+			hub.Publish(sse.Event{Name: "order_created", Data: data})
 		}
 
 		c.JSON(http.StatusCreated, o)

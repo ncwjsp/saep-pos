@@ -11,14 +11,16 @@ import (
 
 	"github.com/ncwjsp/saep-pos/internal/menu"
 	"github.com/ncwjsp/saep-pos/internal/orders"
+	"github.com/ncwjsp/saep-pos/internal/sse"
 )
 
-func newOrderTestRouter() (*gin.Engine, *orders.Store) {
+func newOrderTestRouter() (*gin.Engine, *orders.Store, *sse.Hub) {
 	gin.SetMode(gin.TestMode)
 	store := orders.NewStore(menu.NewDemoStore())
+	hub := sse.NewHub()
 	r := gin.New()
-	r.POST("/t/:qrToken/orders", CreateOrder(store))
-	return r, store
+	r.POST("/t/:qrToken/orders", CreateOrder(store, hub))
+	return r, store, hub
 }
 
 func postOrder(t *testing.T, r *gin.Engine, path, body string) *httptest.ResponseRecorder {
@@ -31,7 +33,7 @@ func postOrder(t *testing.T, r *gin.Engine, path, body string) *httptest.Respons
 }
 
 func TestCreateOrder(t *testing.T) {
-	r, store := newOrderTestRouter()
+	r, store, _ := newOrderTestRouter()
 	body := `{"items":[{"menu_item_id":"1","quantity":2,"note":"ไม่เผ็ด"},{"menu_item_id":"8","quantity":1}]}`
 	w := postOrder(t, r, "/t/demo/orders", body)
 
@@ -71,6 +73,33 @@ func TestCreateOrder(t *testing.T) {
 	}
 }
 
+func TestCreateOrderPublishesEvent(t *testing.T) {
+	r, _, hub := newOrderTestRouter()
+	events, cancel := hub.Subscribe()
+	defer cancel()
+
+	w := postOrder(t, r, "/t/demo/orders", `{"items":[{"menu_item_id":"1","quantity":1}]}`)
+	if w.Code != http.StatusCreated {
+		t.Fatalf("status = %d, want %d", w.Code, http.StatusCreated)
+	}
+
+	select {
+	case ev := <-events:
+		if ev.Name != "order_created" {
+			t.Errorf("event name = %q, want order_created", ev.Name)
+		}
+		var o orders.Order
+		if err := json.Unmarshal(ev.Data, &o); err != nil {
+			t.Fatalf("unmarshaling event data: %v", err)
+		}
+		if o.TotalSatang != 6000 {
+			t.Errorf("event order total_satang = %d, want 6000", o.TotalSatang)
+		}
+	default:
+		t.Fatal("no event published on order creation")
+	}
+}
+
 func TestCreateOrderValidation(t *testing.T) {
 	tests := []struct {
 		name string
@@ -90,7 +119,7 @@ func TestCreateOrderValidation(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			r, store := newOrderTestRouter()
+			r, store, _ := newOrderTestRouter()
 			w := postOrder(t, r, tt.path, tt.body)
 			if w.Code != tt.want {
 				t.Fatalf("status = %d, want %d (body: %s)", w.Code, tt.want, w.Body.String())
