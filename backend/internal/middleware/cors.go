@@ -10,8 +10,9 @@ import (
 // devOrigins are the frontend dev servers allowed to call the API.
 // Deployed origins are configured in a later phase.
 var devOrigins = map[string]bool{
-	"http://localhost:3000": true,
-	"http://127.0.0.1:3000": true,
+	"http://localhost:3000":     true,
+	"http://127.0.0.1:3000":     true,
+	"http://192.168.1.179:3000": true, // dev machine's LAN IP, for the phone demo
 }
 
 // CORS allows cross-origin requests from the dev frontend.
