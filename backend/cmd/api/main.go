@@ -7,6 +7,7 @@ import (
 
 	"github.com/ncwjsp/saep-pos/internal/handlers"
 	"github.com/ncwjsp/saep-pos/internal/menu"
+	"github.com/ncwjsp/saep-pos/internal/middleware"
 	"github.com/ncwjsp/saep-pos/internal/orders"
 	"github.com/ncwjsp/saep-pos/internal/sse"
 )
@@ -17,6 +18,7 @@ func main() {
 	hub := sse.NewHub()
 
 	router := gin.Default()
+	router.Use(middleware.CORS())
 	router.GET("/t/:qrToken/menu", handlers.GetMenu(menuStore))
 	router.POST("/t/:qrToken/orders", handlers.CreateOrder(orderStore, hub))
 	router.GET("/kitchen/stream", handlers.KitchenStream(hub))
